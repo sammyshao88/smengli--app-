@@ -1,0 +1,137 @@
+<!DOCTYPE html>  
+<html lang="zh-CN">  
+<head>  
+    <meta charset="UTF-8">  
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">  
+    <title>英语发音测试助手</title>  
+    <style>  
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }  
+        .card { background: white; padding: 2rem; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 90%; max-width: 400px; text-align: center; }  
+        h1 { color: #1a73e8; font-size: 24px; }  
+        #target-text { font-size: 20px; font-weight: bold; margin: 20px 0; color: #333; min-height: 50px; }  
+        .btn-group { display: flex; flex-direction: column; gap: 10px; }  
+        button { padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; transition: 0.3s; }  
+        .btn-play { background-color: #e8f0fe; color: #1a73e8; }  
+        .btn-mic { background-color: #1a73e8; color: white; }  
+        .btn-mic:disabled { background-color: #ccc; }  
+        .btn-next { background-color: #34a853; color: white; margin-top: 10px; }  
+        #result { margin-top: 20px; padding: 15px; border-radius: 8px; display: none; }  
+        .success { background-color: #e6f4ea; color: #1e8e3e; border: 1px solid #1e8e3e; }  
+        .error { background-color: #fce8e6; color: #d93025; border: 1px solid #d93025; }  
+        .score { font-size: 24px; font-weight: bold; }  
+    </style>  
+</head>  
+<body>  
+  
+<div class="card">  
+    <h1>英语发音练习</h1>  
+    <div id="target-text">Loading...</div>  
+      
+    <div class="btn-group">  
+        <button class="btn-play" onclick="playText()">🔊 听范读</button>  
+        <button id="mic-btn" class="btn-mic" onclick="startRecording()">🎤 开始录音 (请朗读)</button>  
+        <button class="btn-next" onclick="nextSentence()">下一句</button>  
+    </div>  
+  
+    <div id="result">  
+        <div id="score-text" class="score">0分</div>  
+        <p id="feedback-text"></p>  
+        <p style="font-size: 12px; color: #666;">你读的是: <span id="user-said"></span></p>  
+    </div>  
+</div>  
+  
+<script>  
+    const sentences = [  
+        "Hello, how are you today?",  
+        "I love practicing English every morning.",  
+        "The quick brown fox jumps over the lazy dog.",  
+        "Artificial intelligence is changing the world.",  
+        "Can you help me with my pronunciation?"  
+    ];  
+      
+    let currentIndex = 0;  
+    const targetDisplay = document.getElementById('target-text');  
+    const micBtn = document.getElementById('mic-btn');  
+    const resultDiv = document.getElementById('result');  
+    const scoreText = document.getElementById('score-text');  
+    const feedbackText = document.getElementById('feedback-text');  
+    const userSaidText = document.getElementById('user-said');  
+  
+    // 初始化显示  
+    targetDisplay.innerText = sentences[currentIndex];  
+  
+    // 1. 播放范读 (TTS)  
+    function playText() {  
+        const msg = new SpeechSynthesisUtterance(sentences[currentIndex]);  
+        msg.lang = 'en-US';  
+        window.speechSynthesis.speak(msg);  
+    }  
+  
+    // 2. 切换句子  
+    function nextSentence() {  
+        currentIndex = (currentIndex + 1) % sentences.length;  
+        targetDisplay.innerText = sentences[currentIndex];  
+        resultDiv.style.display = 'none';  
+    }  
+  
+    // 3. 核心功能：语音识别与评分  
+    function startRecording() {  
+        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();  
+        recognition.lang = 'en-US';  
+        recognition.interimResults = false;  
+  
+        micBtn.disabled = true;  
+        micBtn.innerText = "正在倾听...";  
+  
+        recognition.start();  
+  
+        recognition.onresult = (event) => {  
+            const userSpeech = event.results[0][0].transcript.toLowerCase().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g,"");  
+            const targetSpeech = sentences[currentIndex].toLowerCase().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g,"");  
+              
+            compareSpeech(userSpeech, targetSpeech);  
+        };  
+  
+        recognition.onerror = () => {  
+            alert("录音出错，请确保开启麦克风权限。");  
+            micBtn.disabled = false;  
+            micBtn.innerText = "🎤 开始录音";  
+        };  
+  
+        recognition.onend = () => {  
+            micBtn.disabled = false;  
+            micBtn.innerText = "🎤 开始录音";  
+        };  
+    }  
+  
+    // 4. 简单的评分逻辑  
+    function compareSpeech(user, target) {  
+        userSaidText.innerText = user;  
+        resultDiv.style.display = 'block';  
+  
+        const userWords = user.split(' ');  
+        const targetWords = target.split(' ');  
+          
+        let matches = 0;  
+        targetWords.forEach(word => {  
+            if (userWords.includes(word)) matches++;  
+        });  
+  
+        const score = Math.round((matches / targetWords.length) * 100);  
+        scoreText.innerText = score + "分";  
+  
+        if (score >= 80) {  
+            resultDiv.className = "success";  
+            feedbackText.innerText = "太棒了！发音非常标准。";  
+        } else if (score >= 50) {  
+            resultDiv.className = "success";  
+            feedbackText.innerText = "还不错，继续努力。";  
+        } else {  
+            resultDiv.className = "error";  
+            feedbackText.innerText = "没听清，再试一次？";  
+        }  
+    }  
+</script>  
+  
+</body>  
+</html>  
